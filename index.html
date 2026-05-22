@@ -226,7 +226,13 @@ function generateWord(){
       const t=d.s[sh]; const excs=(d.exc||[]).filter(e=>e.shift===sh);
       if(!t&&!excs.length) return`<td style="border:1px solid #ddd;color:#ccc;text-align:center">—</td>`;
       let inner="";
-      if(t){const ts=TS[t];inner+=`<div style="background:${ts.bg};color:${ts.text};padding:4px 6px;border-radius:4px;margin-bottom:3px"><b>${t}</b><br><span style="font-size:8pt;line-height:1.6">${(state.teams[t]||[]).join("<br>")}</span></div>`;}
+      if(t){
+        const ts=TS[t];
+        // escludi operai che hanno un'eccezione questo giorno
+        const excNames=(d.exc||[]).map(e=>e.name);
+        const members=(state.teams[t]||[]).filter(wk=>!excNames.includes(wk));
+        inner+=`<div style="background:${ts.bg};color:${ts.text};padding:4px 6px;border-radius:4px;margin-bottom:3px"><b>${t}</b><br><span style="font-size:8pt;line-height:1.6">${members.join("<br>")}</span></div>`;
+      }
       excs.forEach(e=>{const ts=TS[e.realTeam]||{bg:"#fff",text:"#000",border:"#aaa"};inner+=`<div style="border:2px dashed ${ts.border};background:white;color:#111;padding:3px 6px;border-radius:4px;margin-top:3px;font-size:8pt"><span style="background:${ts.bg};color:${ts.text};border-radius:3px;padding:0 4px;font-weight:bold;font-size:7.5pt">${e.realTeam}</span> ${e.name} <i style="color:#888;font-size:7pt">(eccezione)</i></div>`;});
       return`<td style="border:1px solid #ccc;vertical-align:top;padding:5px 7px">${inner}</td>`;
     };
@@ -265,19 +271,16 @@ function generateWord(){
         <td style="background:${ts.bg};color:${ts.text};font-weight:bold;text-align:center;font-size:8pt;border:2px solid #555">${tk}</td>`;
       DAYS.forEach((_,i)=>{
         const d=state.schedule[i];
-        // Prima controlla se la squadra è in turno questo giorno
         let tu="",bg="",fg="",fw="normal",extra="";
-        SHIFTS.forEach(s=>{if(d.s[s]===tk){tu=SL[s];bg=ts.bg;fg="#000000";fw="bold";}});
-        if(!tu){
-          // Controlla se c'è un'eccezione per questo operaio questo giorno
-          const exc=(d.exc||[]).find(e=>e.name===wk);
-          if(exc){
-            tu=SL[exc.shift];
-            bg="#fffbe6";fg="#000000";fw="bold";
-            extra=` <span style="color:#b8860b;font-size:7pt">⚡</span>`;
-          } else {
-            tu="RIPOSO";bg="#f0f0f0";fg="#888";fw="normal";
-          }
+        // Eccezione ha priorità assoluta
+        const exc=(d.exc||[]).find(e=>e.name===wk);
+        if(exc){
+          tu=SL[exc.shift];bg="#fffbe6";fg="#000000";fw="bold";
+          extra=` <span style="color:#b8860b;font-size:7pt">⚡</span>`;
+        } else {
+          // Turno normale della squadra
+          SHIFTS.forEach(s=>{if(d.s[s]===tk){tu=SL[s];bg=ts.bg;fg="#000000";fw="bold";}});
+          if(!tu){tu="RIPOSO";bg="#f0f0f0";fg="#888";fw="normal";}
         }
         pg2+=`<td style="background:${bg};color:${fg};text-align:center;font-size:8pt;border:2px solid #555;padding:3px;font-weight:${fw}">${tu}${extra}</td>`;
       });
