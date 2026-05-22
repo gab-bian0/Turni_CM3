@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turni CM3</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Times New Roman',Times,serif;background:#d4dce8;min-height:100vh;padding:24px}
+.container{max-width:920px;margin:0 auto}
+.hdr{background:#1e2d40;border-radius:12px;padding:20px 26px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 3px 10px rgba(0,0,0,.2)}
+.hdr-left .title{color:white;font-weight:700;font-size:22px;letter-spacing:.3px}
+.hdr-left .sub{color:#c8ddf0;font-size:14px;margin-top:4px}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.week-inputs{display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+.week-inputs .row{display:flex;gap:7px;align-items:center}
+.week-inputs label{color:#c8ddf0;font-size:13px;white-space:nowrap}
+.week-inputs input{background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.35);border-radius:6px;padding:5px 9px;font-size:13px;outline:none}
+.week-inputs input[type=number]{width:68px;text-align:center}
+.week-inputs input:focus{border-color:rgba(255,255,255,0.7)}
+.btn-xls{background:#0e90b8;color:white;border:none;border-radius:8px;padding:11px 20px;font-weight:700;font-size:15px;cursor:pointer;display:flex;align-items:center;gap:7px;white-space:nowrap;transition:background .15s;font-family:inherit;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.btn-xls:hover{background:#077496}
+.tabs{display:flex;background:white;border-radius:10px;padding:5px;margin-bottom:20px;gap:4px;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+.tab{flex:1;padding:10px 16px;font-size:15px;cursor:pointer;background:none;border:none;border-radius:7px;color:#333;font-family:inherit;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:500}
+.tab.active{background:#1e2d40;color:white;font-weight:700}
+.tab:not(.active):hover{background:#eef2f7}
+.day-card{margin-bottom:12px;background:white;border-radius:10px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.09)}
+.day-hdr{background:#c8dcf0;padding:9px 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:2px solid #9ab8d8}
+.day-name{font-weight:700;font-size:16px;color:#0e1e2e;min-width:90px}
+.day-date{font-size:14px;color:#223;font-family:'Courier New',Courier,monospace;font-weight:600}
+.rip-zone{display:flex;align-items:center;gap:5px;margin-left:auto;flex-wrap:wrap}
+.rip-label{font-size:13px;color:#334;font-weight:600}
+.rip-pill{font-size:12px;font-weight:700;padding:3px 11px;border-radius:20px}
+.shifts{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:2px solid #e2eaf4}
+.shift-col{padding:13px 18px;border-right:1px solid #e2eaf4}
+.shift-col:last-child{border-right:none}
+.shift-time{font-size:13px;font-weight:700;color:#111;margin-bottom:9px;font-family:'Courier New',Courier,monospace;letter-spacing:.4px}
+.team-btns{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}
+.team-btn{padding:4px 12px;font-size:13px;font-weight:700;border-radius:20px;cursor:pointer;border-width:2px;border-style:solid;transition:all .12s;font-family:inherit}
+.workers{font-family:'Courier New',Courier,monospace;font-size:12.5px;line-height:1.75;font-weight:600}
+.notes-row{border-top:1px solid #eef2f7;padding:8px 18px}
+.notes-row input{width:100%;font-size:13px;border:none;background:transparent;color:#222;outline:none;font-family:inherit}
+.notes-row input::placeholder{color:#aaa}
+.config-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.config-card{background:white;border-radius:10px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.09)}
+.config-hdr{padding:11px 18px;display:flex;align-items:center;gap:9px}
+.dot{width:15px;height:15px;border-radius:50%;flex-shrink:0}
+.config-body{padding:14px 18px}
+.config-body label{font-size:13px;color:#333;display:block;margin-bottom:6px;font-weight:600}
+.config-body textarea{width:100%;font-family:'Courier New',Courier,monospace;font-size:13px;padding:10px 12px;border-radius:7px;border:1.5px solid #bbb;background:#fafafa;color:#111;resize:vertical;outline:none;line-height:1.8;transition:border-color .15s}
+.config-body textarea:focus{border-color:#0e90b8;background:white}
+.special-card{background:white;border-radius:10px;padding:18px;margin-top:18px;box-shadow:0 2px 6px rgba(0,0,0,.09)}
+.special-title{font-weight:700;font-size:15px;color:#1e2d40;margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.special-row{display:flex;gap:9px;margin-bottom:9px;align-items:center}
+.special-row input{font-size:13px;border:1.5px solid #bbb;border-radius:6px;padding:7px 11px;background:#fafafa;color:#111;outline:none;font-family:inherit}
+.special-row input:focus{border-color:#0e90b8;background:white}
+.del-btn{background:none;border:none;cursor:pointer;color:#aaa;padding:4px 7px;font-size:18px;line-height:1;transition:color .15s;border-radius:4px}
+.del-btn:hover{color:#e24b4a;background:#fff0f0}
+.add-btn{font-size:13px;color:#555;background:none;border:2px dashed #bbb;border-radius:7px;padding:8px 15px;cursor:pointer;margin-top:5px;font-family:inherit;transition:all .15s}
+.add-btn:hover{border-color:#0e90b8;color:#0e90b8}
+.btn-save{width:100%;margin-top:22px;background:#1e2d40;color:white;border:none;border-radius:8px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:9px}
+.btn-save:hover{background:#2a3f58}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e2d40;color:white;padding:11px 26px;border-radius:9px;font-size:15px;font-weight:600;z-index:999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.22);animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(6px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.exc-zone{margin-top:8px;display:flex;flex-direction:column;gap:4px;border-top:1.5px dashed #bbb;padding-top:7px}
+.exc-pill{display:flex;align-items:center;gap:5px;background:#fffbe6;border:1.5px dashed #c8a000;border-radius:7px;padding:3px 7px}
+.exc-badge{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:4px;white-space:nowrap}
+.exc-name{font-size:12.5px;font-weight:600;color:#111;font-family:'Courier New',monospace;flex:1}
+.exc-del{background:none;border:none;color:#c00;font-size:15px;cursor:pointer;padding:0 2px;line-height:1;font-weight:700}
+.exc-del:hover{color:#900}
+.exc-add-btn{margin-top:8px;width:100%;background:none;border:1.5px dashed #ccc;border-radius:7px;padding:6px 8px;font-size:12.5px;color:#777;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;transition:all .15s}
+.exc-add-btn:hover{border-color:#1e2d40;color:#1e2d40;background:#f0f4fa}
+.exc-form{margin-top:8px;background:#fffbe6;border:2px solid #c8a000;border-radius:8px;padding:10px}
+@media(max-width:600px){.shifts{grid-template-columns:1fr}.config-grid{grid-template-columns:1fr}.hdr{flex-direction:column;align-items:flex-start}.hdr-right{width:100%;justify-content:space-between}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="title"><i class="ti ti-building-factory-2" style="margin-right:8px"></i>Turni CM3</div>
+      <div class="sub">Pianificazione automatica settimanale</div>
+    </div>
+    <div class="hdr-right">
+      <div class="week-inputs">
+        <div class="row"><label>Settimana</label><input type="number" id="weekNum" value="21" min="1" max="53" onchange="state.weekNum=+this.value;saveSchedule();render()"></div>
+        <div class="row"><label>Inizio settimana</label><input type="date" id="startDate" value="2025-05-19" onchange="state.startDate=this.value;saveSchedule();render()"></div>
+      </div>
+      <button class="btn-xls" onclick="generateWord()"><i class="ti ti-download"></i>Genera Word</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tab-schedule" onclick="switchTab('schedule')"><i class="ti ti-calendar"></i>Pianifica Turni</button>
+    <button class="tab" id="tab-config" onclick="switchTab('config')"><i class="ti ti-users"></i>Configura Squadre</button>
+  </div>
+
+  <div id="tab-content"></div>
+</div>
+<div id="toast" class="toast" style="display:none"></div>
+
+<script>
+const TS={
+  AZZURRO: {bg:"#c2e8f8",text:"#054a78",border:"#054a78",dot:"#0e80c8"},
+  GIALLO:  {bg:"#fff0a0",text:"#4a3000",border:"#4a3000",dot:"#c89000"},
+  MAGENTA: {bg:"#f8c8e8",text:"#750048",border:"#750048",dot:"#b81870"},
+  GRIGIO:  {bg:"#dcdcdc",text:"#1a1a1a",border:"#444",   dot:"#555"},
+};
+const TKEYS=["AZZURRO","GIALLO","MAGENTA","GRIGIO"];
+const SHIFTS=["06-14","14-22","22-06"];
+const SL={"06-14":"06:00–14:00","14-22":"14:00–22:00","22-06":"22:00–06:00"};
+const DAYS=["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
+const ABBR=["LUN","MAR","MER","GIO","VEN","SAB","DOM"];
+
+function defaultSchedule(){return Array.from({length:7},()=>({s:{"06-14":"","14-22":"","22-06":""},notes:"",exc:[]}));}
+
+let state={
+  tab:"schedule",
+  weekNum:21,
+  startDate:"2025-05-19",
+  teams:{
+    AZZURRO: ["LAITI","CHAMBA","BENTAMI","HASSAN","SALAH","EL HEJRI","GENNARO"],
+    GIALLO:  ["ALI","MARWANE","ABDOU","GIOVANNI","RICCARDO","FABRICE","DANIEL"],
+    MAGENTA: ["KHALFADIR","MATI","FRANCIS","AZIZ","JURGEN","MOUAD"],
+    GRIGIO:  ["BOUCHTA","YASSINE","MOHAMED","RADU","IBRAH","MASOOD","SOFIANE"],
+  },
+  editText:{AZZURRO:"",GIALLO:"",MAGENTA:"",GRIGIO:""},
+  schedule:defaultSchedule(),
+  specialRoles:[{name:"KALEC",role:"Team Leader"},{name:"KETTANI",role:"Riposo"}],
+  excForm:{di:-1,sh:""},  // quale slot ha il form eccezione aperto
+};
+
+function initEditText(){TKEYS.forEach(k=>{state.editText[k]=(state.teams[k]||[]).join("\n");});}
+
+function ensureExc(){state.schedule.forEach(d=>{if(!d.exc)d.exc=[];});}
+
+function loadAll(){
+  try{
+    const cfg=localStorage.getItem("turni-teams-v3");
+    if(cfg){const d=JSON.parse(cfg);if(d.teams)state.teams=d.teams;if(d.specialRoles)state.specialRoles=d.specialRoles;}
+    const wk=localStorage.getItem("turni-week");
+    if(wk){const d=JSON.parse(wk);if(d.weekNum)state.weekNum=d.weekNum;if(d.startDate)state.startDate=d.startDate;}
+    const sch=localStorage.getItem("turni-schedule-v3");
+    if(sch){const d=JSON.parse(sch);if(Array.isArray(d))state.schedule=d;}
+  }catch{}
+  ensureExc();
+  initEditText();
+}
+
+function saveTeams(){
+  try{localStorage.setItem("turni-teams-v3",JSON.stringify({teams:state.teams,specialRoles:state.specialRoles}));}catch{}
+}
+function saveSchedule(){
+  try{
+    localStorage.setItem("turni-week",JSON.stringify({weekNum:state.weekNum,startDate:state.startDate}));
+    localStorage.setItem("turni-schedule-v3",JSON.stringify(state.schedule));
+  }catch{}
+}
+
+function getDate(offset){
+  if(!state.startDate)return"";
+  try{const d=new Date(state.startDate+"T00:00:00");d.setDate(d.getDate()+offset);return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0");}catch{return"";}
+}
+
+function getRiposo(day){const used=SHIFTS.map(s=>day.s[s]).filter(Boolean);return TKEYS.filter(k=>!used.includes(k));}
+
+let toastTimer=null;
+function showToast(msg){
+  const t=document.getElementById("toast");t.textContent=msg;t.style.display="block";
+  if(toastTimer)clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>{t.style.display="none";},2200);
+}
+
+function setShift(di,sh,team){
+  const day=state.schedule[di];const cur=day.s[sh];
+  if(cur===team){day.s[sh]="";}
+  else{SHIFTS.forEach(s=>{if(day.s[s]===team)day.s[s]="";});day.s[sh]=team;}
+  saveSchedule();render();
+}
+
+function openExcForm(di,sh){
+  state.excForm={di,sh};render();
+  setTimeout(()=>{const el=document.getElementById("exc-name-input");if(el)el.focus();},50);
+}
+function closeExcForm(){state.excForm={di:-1,sh:""};render();}
+
+function addException(di,sh){
+  const nameEl=document.getElementById("exc-name-input");
+  const teamEl=document.getElementById("exc-team-select");
+  if(!nameEl||!teamEl)return;
+  const name=nameEl.value.trim().toUpperCase();
+  const realTeam=teamEl.value;
+  if(!name)return;
+  if(!state.schedule[di].exc)state.schedule[di].exc=[];
+  state.schedule[di].exc.push({name,realTeam,shift:sh});
+  saveSchedule();
+  state.excForm={di:-1,sh:""};
+  render();
+}
+
+function removeException(di,idx){
+  state.schedule[di].exc.splice(idx,1);
+  saveSchedule();render();
+}
+
+
+
+function generateWord(){
+  const w=state.weekNum; const df=i=>getDate(i);
+
+  /* ── foglio 1: griglia settimanale (landscape) ── */
+  let pg1=`<table style="width:100%;border-collapse:collapse;font-size:9.5pt">
+<tr><td colspan=6 style="background:#1e2d40;color:white;font-weight:bold;font-size:13pt;text-align:center;padding:7px;border:1px solid #1e2d40">TURNI &nbsp;·&nbsp; SETTIMANA ${w} &nbsp;·&nbsp; ${df(0)} – ${df(6)}</td></tr>
+<tr>
+  <td style="background:#48CAE4;color:white;font-weight:bold;text-align:center;font-size:9pt;border:1px solid #ccc;width:10%">GIORNO</td>
+  <td style="background:#48CAE4;color:white;font-weight:bold;text-align:center;font-size:9pt;border:1px solid #ccc;width:26%">06:00 – 14:00</td>
+  <td style="background:#48CAE4;color:white;font-weight:bold;text-align:center;font-size:9pt;border:1px solid #ccc;width:26%">14:00 – 22:00</td>
+  <td style="background:#48CAE4;color:white;font-weight:bold;text-align:center;font-size:9pt;border:1px solid #ccc;width:26%">22:00 – 06:00</td>
+  <td style="background:#48CAE4;color:white;font-weight:bold;text-align:center;font-size:9pt;border:1px solid #ccc;width:12%">RIPOSO</td>
+</tr>`;
+
+  DAYS.forEach((dn,i)=>{
+    const d=state.schedule[i]; const rip=getRiposo(d);
+    const shiftCell=sh=>{
+      const t=d.s[sh]; const excs=(d.exc||[]).filter(e=>e.shift===sh);
+      if(!t&&!excs.length) return`<td style="border:1px solid #ddd;color:#ccc;text-align:center">—</td>`;
+      let inner="";
+      if(t){const ts=TS[t];inner+=`<div style="background:${ts.bg};color:${ts.text};padding:4px 6px;border-radius:4px;margin-bottom:3px"><b>${t}</b><br><span style="font-size:8pt;line-height:1.6">${(state.teams[t]||[]).join("<br>")}</span></div>`;}
+      excs.forEach(e=>{const ts=TS[e.realTeam]||{bg:"#fff",text:"#000",border:"#aaa"};inner+=`<div style="border:2px dashed ${ts.border};background:white;color:#111;padding:3px 6px;border-radius:4px;margin-top:3px;font-size:8pt"><span style="background:${ts.bg};color:${ts.text};border-radius:3px;padding:0 4px;font-weight:bold;font-size:7.5pt">${e.realTeam}</span> ${e.name} <i style="color:#888;font-size:7pt">(eccezione)</i></div>`;});
+      return`<td style="border:1px solid #ccc;vertical-align:top;padding:5px 7px">${inner}</td>`;
+    };
+    const ripText=rip.map(r=>{const ts=TS[r];return`<span style="background:${ts.bg};color:${ts.text};font-weight:bold;padding:1px 5px;border-radius:3px;font-size:8pt;display:inline-block;margin-bottom:2px">${r}</span>`;}).join("<br>");
+    const noteStr=d.notes?`<div style="margin-top:4px;font-size:8pt;color:#555;border-top:1px dotted #ccc;padding-top:3px">📝 ${d.notes}</div>`:"";
+    pg1+=`<tr>
+      <td style="background:#EAF2FB;font-weight:bold;font-size:9.5pt;text-align:center;border:1px solid #ccc;vertical-align:middle;padding:5px">
+        <div>${dn}</div><div style="font-size:8pt;color:#666;font-weight:normal;font-family:monospace">${df(i)}</div>
+      </td>
+      ${shiftCell("06-14")}${shiftCell("14-22")}${shiftCell("22-06")}
+      <td style="background:#f7f7f7;border:1px solid #ccc;vertical-align:top;padding:5px;font-size:8.5pt">${ripText}${noteStr}</td>
+    </tr>`;
+  });
+
+  if(state.specialRoles.length){
+    pg1+=`<tr><td colspan=6 style="background:#EDE7F6;color:#4A148C;font-weight:bold;font-size:9pt;padding:5px 8px;border:1px solid #ccc">
+      RUOLI SPECIALI: ${state.specialRoles.map(sr=>`${sr.name} (${sr.role})`).join(" &nbsp;·&nbsp; ")}
+    </td></tr>`;
+  }
+  pg1+=`</table>`;
+
+  /* ── foglio 2: vista per operaio (portrait) ── */
+  let pg2=`<table style="width:100%;border-collapse:collapse;font-size:9pt">
+<tr><td colspan=${2+DAYS.length} style="background:#1e2d40;color:white;font-weight:bold;font-size:13pt;text-align:center;padding:8px;border:2px solid #1e2d40">ORARI PER OPERATORE &nbsp;·&nbsp; SETTIMANA ${w} &nbsp;·&nbsp; ${df(0)} – ${df(6)}</td></tr>
+<tr>
+  <td style="background:#1e6f9f;color:white;font-weight:bold;text-align:center;font-size:8.5pt;border:2px solid #0a4c72;width:14%">OPERAIO</td>
+  <td style="background:#1e6f9f;color:white;font-weight:bold;text-align:center;font-size:8.5pt;border:2px solid #0a4c72;width:9%">SQUADRA</td>
+  ${ABBR.map((a,i)=>`<td style="background:#1e6f9f;color:white;font-weight:bold;text-align:center;font-size:8pt;border:2px solid #0a4c72">${a}<br><span style="font-weight:normal;font-size:7.5pt;font-family:monospace">${df(i)}</span></td>`).join("")}
+</tr>`;
+
+  TKEYS.forEach(tk=>{
+    const ts=TS[tk];
+    (state.teams[tk]||[]).forEach(wk=>{
+      pg2+=`<tr>
+        <td style="background:${ts.bg};color:${ts.text};font-weight:bold;font-size:8.5pt;border:2px solid #555;padding:4px 6px">${wk}</td>
+        <td style="background:${ts.bg};color:${ts.text};font-weight:bold;text-align:center;font-size:8pt;border:2px solid #555">${tk}</td>`;
+      DAYS.forEach((_,i)=>{
+        const d=state.schedule[i];let tu="RIPOSO",bg="#f0f0f0",fg="#888",fw="normal";
+        SHIFTS.forEach(s=>{if(d.s[s]===tk){tu=SL[s];bg=ts.bg;fg="#000000";fw="bold";}});
+        pg2+=`<td style="background:${bg};color:${fg};text-align:center;font-size:8pt;border:2px solid #555;padding:3px;font-weight:${fw}">${tu}</td>`;
+      });
+      pg2+=`</tr>`;
+    });
+    pg2+=`<tr><td colspan=${2+DAYS.length} style="background:#1e2d40;height:4px;padding:0;border:none"></td></tr>`;
+  });
+  // Eccezioni: una riga per ogni lavoratore in turno diverso dal suo
+  const allExc=[];
+  state.schedule.forEach((d,i)=>{(d.exc||[]).forEach(e=>{allExc.push({...e,dayIdx:i});});});
+  if(allExc.length){
+    pg2+=`<tr><td colspan=${2+DAYS.length} style="background:#4a3060;color:white;font-weight:bold;font-size:8.5pt;padding:5px 8px;border:2px solid #4a3060">⚡ ECCEZIONI SETTIMANALI (operai in turno diverso dalla propria squadra)</td></tr>`;
+    allExc.forEach(e=>{
+      const ts=TS[e.realTeam]||{bg:"#eee",text:"#000"};
+      pg2+=`<tr>
+        <td style="border:2px dashed #888;padding:4px 6px;font-weight:bold;font-size:8.5pt">${e.name}</td>
+        <td style="background:${ts.bg};color:${ts.text};font-weight:bold;text-align:center;font-size:8pt;border:2px dashed #888">${e.realTeam} ⚡</td>`;
+      DAYS.forEach((_,i)=>{
+        const match=allExc.find(x=>x.name===e.name&&x.dayIdx===i);
+        const val=match?`${SL[match.shift]}`:"—";
+        const isFilled=match!=null;
+        pg2+=`<td style="background:${isFilled?'#fff8e1':'#f8f8f8'};color:${isFilled?'#000':'#aaa'};text-align:center;font-size:8pt;border:2px dashed #888;padding:3px;font-weight:${isFilled?'bold':'normal'}">${val}</td>`;
+      });
+      pg2+=`</tr>`;
+    });
+  }
+  pg2+=`</table>`;
+
+  const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office"
+    xmlns:w="urn:schemas-microsoft-com:office:word"
+    xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8">
+<xml>
+  <w:WordDocument>
+    <w:View>Print</w:View>
+    <w:Zoom>90</w:Zoom>
+    <w:DoNotOptimizeForBrowser/>
+  </w:WordDocument>
+</xml>
+<style>
+  @page Section1 { size:29.7cm 21cm; mso-page-orientation:landscape; margin:1.4cm 1.4cm 1.4cm 1.4cm; }
+  @page Section2 { size:21cm 29.7cm; mso-page-orientation:portrait;  margin:1.4cm 1.4cm 1.4cm 1.4cm; }
+  div.sec1 { page:Section1; }
+  div.sec2 { page:Section2; }
+  body { font-family:Calibri,sans-serif; }
+</style>
+</head><body>
+<div class=sec1>${pg1}</div>
+<br style="page-break-before:always">
+<div class=sec2>${pg2}</div>
+</body></html>`;
+
+  const blob=new Blob([html],{type:"application/msword;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;a.download=`TURNI_W${w}.doc`;a.click();URL.revokeObjectURL(url);
+  showToast("✓ Word scaricato: TURNI_W"+w+".doc");
+}
+
+function switchTab(t){
+  state.tab=t;
+  document.getElementById("tab-schedule").className="tab"+(t==="schedule"?" active":"");
+  document.getElementById("tab-config").className="tab"+(t==="config"?" active":"");
+  render();
+}
+
+function render(){
+  const c=document.getElementById("tab-content");
+  if(state.tab==="schedule"){
+    document.getElementById("weekNum").value=state.weekNum;
+    document.getElementById("startDate").value=state.startDate;
+    c.innerHTML=DAYS.map((dn,i)=>{
+      const d=state.schedule[i];const rip=getRiposo(d);
+      const ripPills=rip.length?rip.map(r=>`<span class=rip-pill style="background:${TS[r].bg};color:${TS[r].text}">${r}</span>`).join(""):`<span style="font-size:11px;color:#bbb">nessuna</span>`;
+      const shiftCols=SHIFTS.map(sh=>{
+        const sel=d.s[sh];
+        const btns=TKEYS.map(t=>{const ts=TS[t];const isSel=sel===t;return`<button class=team-btn onclick="setShift(${i},'${sh}','${t}')" style="background:${isSel?ts.bg:'transparent'};color:${isSel?ts.text:'#555'};border-color:${ts.border}">${t}</button>`;}).join("");
+        // operai normali
+        const workers=sel?`<div class=workers style="color:${TS[sel].text};margin-top:2px">${(state.teams[sel]||[]).map(w=>`<div>${w}</div>`).join("")}</div>`:"";
+        // eccezioni per questo slot
+        const excs=(d.exc||[]).filter(e=>e.shift===sh);
+        const excHtml=excs.length?`<div class=exc-zone>${excs.map((e,ei)=>{const ts=TS[e.realTeam]||{bg:"#eee",text:"#111",border:"#aaa"};const gi=(d.exc||[]).indexOf(e);return`<div class=exc-pill><span class=exc-badge style="background:${ts.bg};color:${ts.text};border:1.5px solid ${ts.border}">${e.realTeam}</span><span class=exc-name>${e.name}</span><button class=exc-del onclick="removeException(${i},${gi})" title="Rimuovi">×</button></div>`;}).join("")}</div>`:"";
+        // form aggiunta eccezione
+        const isOpen=state.excForm.di===i&&state.excForm.sh===sh;
+        const formHtml=isOpen?`<div class=exc-form>
+          <input id="exc-name-input" placeholder="NOME OPERAIO" style="width:100%;font-size:12px;padding:5px 8px;border:1.5px solid #bbb;border-radius:6px;font-family:inherit;margin-bottom:6px;text-transform:uppercase" onkeydown="if(event.key==='Enter')addException(${i},'${sh}');if(event.key==='Escape')closeExcForm()">
+          <select id="exc-team-select" style="width:100%;font-size:12px;padding:5px 8px;border:1.5px solid #bbb;border-radius:6px;font-family:inherit;margin-bottom:6px">${TKEYS.map(k=>`<option value="${k}">${k}</option>`).join("")}</select>
+          <div style="display:flex;gap:6px"><button onclick="addException(${i},'${sh}')" style="flex:1;background:#1e2d40;color:white;border:none;border-radius:6px;padding:6px;font-size:12px;cursor:pointer;font-family:inherit">Aggiungi</button><button onclick="closeExcForm()" style="background:#eee;color:#555;border:none;border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer">✕</button></div>
+        </div>`:`<button class=exc-add-btn onclick="openExcForm(${i},'${sh}')"><i class='ti ti-user-plus'></i> eccezione</button>`;
+        return`<div class=shift-col><div class=shift-time>${SL[sh]}</div><div class=team-btns>${btns}</div>${workers}${excHtml}${formHtml}</div>`;
+      }).join("");
+      return`<div class=day-card>
+        <div class=day-hdr>
+          <span class=day-name>${dn}</span>
+          <span class=day-date>${getDate(i)}</span>
+          <div class=rip-zone><span class=rip-label>Riposo:</span>${ripPills}</div>
+        </div>
+        <div class=shifts>${shiftCols}</div>
+        <div class=notes-row><input placeholder="Note (ferie, formazione, sostituzioni...)" value="${(d.notes||"").replace(/"/g,"&quot;")}" oninput="state.schedule[${i}].notes=this.value;saveSchedule()"></div>
+      </div>`;
+    }).join("");
+  } else {
+    const cards=TKEYS.map(k=>{
+      const ts=TS[k];const cnt=(state.editText[k]||"").split("\n").filter(s=>s.trim()).length;
+      return`<div class=config-card>
+        <div class=config-hdr style="background:${ts.bg}">
+          <div class=dot style="background:${ts.dot}"></div>
+          <span style="font-weight:600;font-size:13px;color:${ts.text}">Squadra ${k}</span>
+          <span style="margin-left:auto;font-size:11px;color:${ts.text};opacity:.8">${cnt} operai</span>
+        </div>
+        <div class=config-body>
+          <label>Un operaio per riga (maiuscolo automatico):</label>
+          <textarea rows=9 id="et_${k}" oninput="state.editText['${k}']=this.value.toUpperCase();this.value=state.editText['${k}']">${(state.editText[k]||"").replace(/</g,"&lt;")}</textarea>
+        </div>
+      </div>`;
+    }).join("");
+    const specials=(state.specialRoles||[]).map((sr,i)=>`
+      <div class=special-row>
+        <input value="${sr.name}" placeholder="NOME" style="width:140px;font-family:monospace;font-weight:600" oninput="state.specialRoles[${i}].name=this.value.toUpperCase();this.value=state.specialRoles[${i}].name">
+        <input value="${sr.role}" placeholder="Ruolo (es. Team Leader)" style="flex:1" oninput="state.specialRoles[${i}].role=this.value">
+        <button class=del-btn onclick="state.specialRoles.splice(${i},1);render()" title="Elimina"><i class='ti ti-trash'></i></button>
+      </div>`).join("");
+    c.innerHTML=`<div class=config-grid>${cards}</div>
+      <div class=special-card>
+        <div class=special-title><i class='ti ti-star'></i>Ruoli speciali (Team Leader, ecc.)</div>
+        ${specials}
+        <button class=add-btn onclick="state.specialRoles.push({name:'',role:''});render()">+ Aggiungi ruolo</button>
+      </div>
+      <button class=btn-save onclick="saveConfig()"><i class='ti ti-device-floppy'></i>Salva configurazione squadre</button>`;
+  }
+}
+
+function saveConfig(){
+  TKEYS.forEach(k=>{state.teams[k]=(state.editText[k]||"").split("\n").map(s=>s.trim()).filter(Boolean);});
+  saveTeams();
+  showToast("✓ Squadre salvate nel browser");
+  render();
+}
+
+loadAll();
+render();
+</script>
+</body>
+</html>
