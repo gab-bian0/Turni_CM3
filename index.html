@@ -264,33 +264,27 @@ function generateWord(){
         <td style="background:${ts.bg};color:${ts.text};font-weight:bold;font-size:8.5pt;border:2px solid #555;padding:4px 6px">${wk}</td>
         <td style="background:${ts.bg};color:${ts.text};font-weight:bold;text-align:center;font-size:8pt;border:2px solid #555">${tk}</td>`;
       DAYS.forEach((_,i)=>{
-        const d=state.schedule[i];let tu="RIPOSO",bg="#f0f0f0",fg="#888",fw="normal";
+        const d=state.schedule[i];
+        // Prima controlla se la squadra è in turno questo giorno
+        let tu="",bg="",fg="",fw="normal",extra="";
         SHIFTS.forEach(s=>{if(d.s[s]===tk){tu=SL[s];bg=ts.bg;fg="#000000";fw="bold";}});
-        pg2+=`<td style="background:${bg};color:${fg};text-align:center;font-size:8pt;border:2px solid #555;padding:3px;font-weight:${fw}">${tu}</td>`;
+        if(!tu){
+          // Controlla se c'è un'eccezione per questo operaio questo giorno
+          const exc=(d.exc||[]).find(e=>e.name===wk);
+          if(exc){
+            tu=SL[exc.shift];
+            bg="#fffbe6";fg="#000000";fw="bold";
+            extra=` <span style="color:#b8860b;font-size:7pt">⚡</span>`;
+          } else {
+            tu="RIPOSO";bg="#f0f0f0";fg="#888";fw="normal";
+          }
+        }
+        pg2+=`<td style="background:${bg};color:${fg};text-align:center;font-size:8pt;border:2px solid #555;padding:3px;font-weight:${fw}">${tu}${extra}</td>`;
       });
       pg2+=`</tr>`;
     });
     pg2+=`<tr><td colspan=${2+DAYS.length} style="background:#1e2d40;height:4px;padding:0;border:none"></td></tr>`;
   });
-  // Eccezioni: una riga per ogni lavoratore in turno diverso dal suo
-  const allExc=[];
-  state.schedule.forEach((d,i)=>{(d.exc||[]).forEach(e=>{allExc.push({...e,dayIdx:i});});});
-  if(allExc.length){
-    pg2+=`<tr><td colspan=${2+DAYS.length} style="background:#4a3060;color:white;font-weight:bold;font-size:8.5pt;padding:5px 8px;border:2px solid #4a3060">⚡ ECCEZIONI SETTIMANALI (operai in turno diverso dalla propria squadra)</td></tr>`;
-    allExc.forEach(e=>{
-      const ts=TS[e.realTeam]||{bg:"#eee",text:"#000"};
-      pg2+=`<tr>
-        <td style="border:2px dashed #888;padding:4px 6px;font-weight:bold;font-size:8.5pt">${e.name}</td>
-        <td style="background:${ts.bg};color:${ts.text};font-weight:bold;text-align:center;font-size:8pt;border:2px dashed #888">${e.realTeam} ⚡</td>`;
-      DAYS.forEach((_,i)=>{
-        const match=allExc.find(x=>x.name===e.name&&x.dayIdx===i);
-        const val=match?`${SL[match.shift]}`:"—";
-        const isFilled=match!=null;
-        pg2+=`<td style="background:${isFilled?'#fff8e1':'#f8f8f8'};color:${isFilled?'#000':'#aaa'};text-align:center;font-size:8pt;border:2px dashed #888;padding:3px;font-weight:${isFilled?'bold':'normal'}">${val}</td>`;
-      });
-      pg2+=`</tr>`;
-    });
-  }
   pg2+=`</table>`;
 
   const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office"
