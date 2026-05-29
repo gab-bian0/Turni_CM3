@@ -104,10 +104,10 @@ body{font-family:'Times New Roman',Times,serif;background:#d4dce8;min-height:100
 const TS={
   AZZURRO: {bg:"#c2e8f8",text:"#054a78",border:"#054a78",dot:"#0e80c8"},
   GIALLO:  {bg:"#fff0a0",text:"#4a3000",border:"#4a3000",dot:"#c89000"},
-  MAGENTA: {bg:"#f8c8e8",text:"#750048",border:"#750048",dot:"#b81870"},
+  ROSSO: {bg:"#f8c8e8",text:"#750048",border:"#750048",dot:"#b81870"},
   GRIGIO:  {bg:"#dcdcdc",text:"#1a1a1a",border:"#444",   dot:"#555"},
 };
-const TKEYS=["AZZURRO","GIALLO","MAGENTA","GRIGIO"];
+const TKEYS=["AZZURRO","GIALLO","ROSSO","GRIGIO"];
 const SHIFTS=["06-14","14-22","22-06"];
 const SL={"06-14":"06:00–14:00","14-22":"14:00–22:00","22-06":"22:00–06:00"};
 const DAYS=["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
@@ -122,10 +122,10 @@ let state={
   teams:{
     AZZURRO: ["LAITI","CHAMBA","BENTAMI","HASSAN","SALAH","EL HEJRI","GENNARO"],
     GIALLO:  ["ALI","MARWANE","ABDOU","GIOVANNI","RICCARDO","FABRICE","DANIEL"],
-    MAGENTA: ["KHALFADIR","MATI","FRANCIS","AZIZ","JURGEN","MOUAD"],
+    ROSSO: ["KHALFADIR","MATI","FRANCIS","AZIZ","JURGEN","MOUAD"],
     GRIGIO:  ["BOUCHTA","YASSINE","MOHAMED","RADU","IBRAH","MASOOD","SOFIANE"],
   },
-  editText:{AZZURRO:"",GIALLO:"",MAGENTA:"",GRIGIO:""},
+  editText:{AZZURRO:"",GIALLO:"",ROSSO:"",GRIGIO:""},
   schedule:defaultSchedule(),
   specialRoles:[{name:"KALEC",role:"Team Leader"},{name:"KETTANI",role:"Riposo"}],
   excForm:{di:-1,sh:""},  // quale slot ha il form eccezione aperto
