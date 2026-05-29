@@ -128,12 +128,32 @@ let state={
   editText:{AZZURRO:"",GIALLO:"",ROSSO:"",GRIGIO:""},
   schedule:defaultSchedule(),
   specialRoles:[{name:"KALEC",role:"Team Leader"},{name:"KETTANI",role:"Riposo"}],
+  absences:[],  // ferie/malattia settimanali: {name, type}
   excForm:{di:-1,sh:""},  // quale slot ha il form eccezione aperto
 };
 
 function initEditText(){TKEYS.forEach(k=>{state.editText[k]=(state.teams[k]||[]).join("\n");});}
 
 function ensureExc(){state.schedule.forEach(d=>{if(!d.exc)d.exc=[];});}
+
+// Converte vecchi nomi squadra salvati (es. MAGENTA -> ROSSO) e rimuove riferimenti a squadre non più esistenti
+function migrateData(){
+  const RENAME={MAGENTA:"ROSSO"};
+  Object.keys(RENAME).forEach(old=>{
+    if(state.teams[old]!==undefined){
+      const neu=RENAME[old];
+      if(state.teams[neu]===undefined||state.teams[neu].length===0) state.teams[neu]=state.teams[old];
+      delete state.teams[old];
+    }
+  });
+  state.schedule.forEach(d=>{
+    SHIFTS.forEach(s=>{
+      if(RENAME[d.s[s]]) d.s[s]=RENAME[d.s[s]];
+      if(d.s[s]&&!TKEYS.includes(d.s[s])) d.s[s]="";
+    });
+    (d.exc||[]).forEach(e=>{ if(RENAME[e.realTeam]) e.realTeam=RENAME[e.realTeam]; });
+  });
+}
 
 function loadAll(){
   try{
@@ -143,8 +163,12 @@ function loadAll(){
     if(wk){const d=JSON.parse(wk);if(d.weekNum)state.weekNum=d.weekNum;if(d.startDate)state.startDate=d.startDate;}
     const sch=localStorage.getItem("turni-schedule-v3");
     if(sch){const d=JSON.parse(sch);if(Array.isArray(d))state.schedule=d;}
+    const abs=localStorage.getItem("turni-absences-v1");
+    if(abs){const d=JSON.parse(abs);if(Array.isArray(d))state.absences=d;}
   }catch{}
   ensureExc();
+  migrateData();
+  saveTeams();saveSchedule();
   initEditText();
 }
 
@@ -155,6 +179,7 @@ function saveSchedule(){
   try{
     localStorage.setItem("turni-week",JSON.stringify({weekNum:state.weekNum,startDate:state.startDate}));
     localStorage.setItem("turni-schedule-v3",JSON.stringify(state.schedule));
+    localStorage.setItem("turni-absences-v1",JSON.stringify(state.absences||[]));
   }catch{}
 }
 
@@ -204,6 +229,23 @@ function removeException(di,idx){
   saveSchedule();render();
 }
 
+// ── Ferie / Malattia ──────────────────────────────────────────
+// Set dei nomi assenti (maiuscolo) per filtrarli dai turni
+function absentSet(){
+  const m={};
+  (state.absences||[]).forEach(a=>{const n=(a.name||"").trim().toUpperCase();if(n)m[n]=a.type;});
+  return m;
+}
+function addAbsence(type){
+  if(!state.absences)state.absences=[];
+  state.absences.push({name:"",type:type||"FERIE"});
+  saveSchedule();render();
+}
+function removeAbsence(idx){
+  state.absences.splice(idx,1);
+  saveSchedule();render();
+}
+
 
 
 function generateWord(){
@@ -228,9 +270,10 @@ function generateWord(){
       let inner="";
       if(t){
         const ts=TS[t];
-        // escludi operai che hanno un'eccezione questo giorno
+        // escludi operai con eccezione o in ferie/malattia questo giorno
         const excNames=(d.exc||[]).map(e=>e.name);
-        const members=(state.teams[t]||[]).filter(wk=>!excNames.includes(wk));
+        const absent=absentSet();
+        const members=(state.teams[t]||[]).filter(wk=>!excNames.includes(wk)&&!absent[wk.toUpperCase()]);
         inner+=`<div style="background:${ts.bg};color:${ts.text};padding:4px 6px;border-radius:4px;margin-bottom:3px"><b>${t}</b><br><span style="font-size:8pt;line-height:1.6">${members.join("<br>")}</span></div>`;
       }
       excs.forEach(e=>{const ts=TS[e.realTeam]||{bg:"#fff",text:"#000",border:"#aaa"};inner+=`<div style="border:2px dashed ${ts.border};background:white;color:#111;padding:3px 6px;border-radius:4px;margin-top:3px;font-size:8pt"><span style="background:${ts.bg};color:${ts.text};border-radius:3px;padding:0 4px;font-weight:bold;font-size:7.5pt">${e.realTeam}</span> ${e.name} <i style="color:#888;font-size:7pt">(eccezione)</i></div>`;});
@@ -263,24 +306,33 @@ function generateWord(){
   ${ABBR.map((a,i)=>`<td style="background:#1e6f9f;color:white;font-weight:bold;text-align:center;font-size:8pt;border:2px solid #0a4c72">${a}<br><span style="font-weight:normal;font-size:7.5pt;font-family:monospace">${df(i)}</span></td>`).join("")}
 </tr>`;
 
+  const absentMap=absentSet();
   TKEYS.forEach(tk=>{
     const ts=TS[tk];
     (state.teams[tk]||[]).forEach(wk=>{
+      const absType=absentMap[wk.toUpperCase()];
       pg2+=`<tr>
         <td style="background:${ts.bg};color:${ts.text};font-weight:bold;font-size:8.5pt;border:2px solid #555;padding:4px 6px">${wk}</td>
         <td style="background:${ts.bg};color:${ts.text};font-weight:bold;text-align:center;font-size:8pt;border:2px solid #555">${tk}</td>`;
       DAYS.forEach((_,i)=>{
         const d=state.schedule[i];
         let tu="",bg="",fg="",fw="normal",extra="";
-        // Eccezione ha priorità assoluta
-        const exc=(d.exc||[]).find(e=>e.name===wk);
-        if(exc){
-          tu=SL[exc.shift];bg="#fffbe6";fg="#000000";fw="bold";
-          extra=` <span style="color:#b8860b;font-size:7pt">⚡</span>`;
+        if(absType){
+          // Ferie/Malattia: priorità massima, tutta la settimana
+          tu=absType;
+          if(absType==="FERIE"){bg="#e3f2e8";fg="#1b5e20";}
+          else{bg="#fde8e8";fg="#9c1414";}
+          fw="bold";
         } else {
-          // Turno normale della squadra
-          SHIFTS.forEach(s=>{if(d.s[s]===tk){tu=SL[s];bg=ts.bg;fg="#000000";fw="bold";}});
-          if(!tu){tu="RIPOSO";bg="#f0f0f0";fg="#888";fw="normal";}
+          // Eccezione ha priorità sul turno normale
+          const exc=(d.exc||[]).find(e=>e.name===wk);
+          if(exc){
+            tu=SL[exc.shift];bg="#fffbe6";fg="#000000";fw="bold";
+            extra=` <span style="color:#b8860b;font-size:7pt">⚡</span>`;
+          } else {
+            SHIFTS.forEach(s=>{if(d.s[s]===tk){tu=SL[s];bg=ts.bg;fg="#000000";fw="bold";}});
+            if(!tu){tu="RIPOSO";bg="#f0f0f0";fg="#888";fw="normal";}
+          }
         }
         pg2+=`<td style="background:${bg};color:${fg};text-align:center;font-size:8pt;border:2px solid #555;padding:3px;font-weight:${fw}">${tu}${extra}</td>`;
       });
@@ -332,14 +384,15 @@ function render(){
   if(state.tab==="schedule"){
     document.getElementById("weekNum").value=state.weekNum;
     document.getElementById("startDate").value=state.startDate;
-    c.innerHTML=DAYS.map((dn,i)=>{
+    const dayCards=DAYS.map((dn,i)=>{
       const d=state.schedule[i];const rip=getRiposo(d);
-      const ripPills=rip.length?rip.map(r=>`<span class=rip-pill style="background:${TS[r].bg};color:${TS[r].text}">${r}</span>`).join(""):`<span style="font-size:11px;color:#bbb">nessuna</span>`;
+      const ripPills=rip.length?rip.map(r=>{const ts=TS[r]||{bg:"#eee",text:"#111"};return`<span class=rip-pill style="background:${ts.bg};color:${ts.text}">${r}</span>`;}).join(""):`<span style="font-size:11px;color:#bbb">nessuna</span>`;
       const shiftCols=SHIFTS.map(sh=>{
         const sel=d.s[sh];
         const btns=TKEYS.map(t=>{const ts=TS[t];const isSel=sel===t;return`<button class=team-btn onclick="setShift(${i},'${sh}','${t}')" style="background:${isSel?ts.bg:'transparent'};color:${isSel?ts.text:'#555'};border-color:${ts.border}">${t}</button>`;}).join("");
         // operai normali
-        const workers=sel?`<div class=workers style="color:${TS[sel].text};margin-top:2px">${(state.teams[sel]||[]).map(w=>`<div>${w}</div>`).join("")}</div>`:"";
+        const selTs=sel?(TS[sel]||{text:"#111"}):null;
+        const workers=sel?`<div class=workers style="color:${selTs.text};margin-top:2px">${(state.teams[sel]||[]).map(w=>`<div>${w}</div>`).join("")}</div>`:"";
         // eccezioni per questo slot
         const excs=(d.exc||[]).filter(e=>e.shift===sh);
         const excHtml=excs.length?`<div class=exc-zone>${excs.map((e,ei)=>{const ts=TS[e.realTeam]||{bg:"#eee",text:"#111",border:"#aaa"};const gi=(d.exc||[]).indexOf(e);return`<div class=exc-pill><span class=exc-badge style="background:${ts.bg};color:${ts.text};border:1.5px solid ${ts.border}">${e.realTeam}</span><span class=exc-name>${e.name}</span><button class=exc-del onclick="removeException(${i},${gi})" title="Rimuovi">×</button></div>`;}).join("")}</div>`:"";
@@ -362,6 +415,31 @@ function render(){
         <div class=notes-row><input placeholder="Note (ferie, formazione, sostituzioni...)" value="${(d.notes||"").replace(/"/g,"&quot;")}" oninput="state.schedule[${i}].notes=this.value;saveSchedule()"></div>
       </div>`;
     }).join("");
+
+    // ── Card Ferie / Malattia (settimanale) ──
+    const absRows=(state.absences||[]).map((a,i)=>{
+      const isFerie=a.type==="FERIE";
+      const badgeBg=isFerie?"#e3f2e8":"#fde8e8";
+      const badgeFg=isFerie?"#1b5e20":"#9c1414";
+      return`<div class=special-row>
+        <input value="${(a.name||"").replace(/"/g,'&quot;')}" placeholder="NOME OPERAIO" style="width:160px;font-family:monospace;font-weight:600;text-transform:uppercase" oninput="state.absences[${i}].name=this.value.toUpperCase();this.value=state.absences[${i}].name;saveSchedule()">
+        <select style="font-size:13px;border:1.5px solid #bbb;border-radius:6px;padding:7px 11px;font-family:inherit;font-weight:700;background:${badgeBg};color:${badgeFg}" onchange="state.absences[${i}].type=this.value;saveSchedule();render()">
+          <option value="FERIE" ${isFerie?"selected":""}>🌴 FERIE</option>
+          <option value="MALATTIA" ${!isFerie?"selected":""}>🤒 MALATTIA</option>
+        </select>
+        <button class=del-btn onclick="removeAbsence(${i})" title="Elimina"><i class='ti ti-trash'></i></button>
+      </div>`;
+    }).join("");
+    const absCard=`<div class=special-card style="border-top:4px solid #c89000">
+      <div class=special-title><i class='ti ti-calendar-off'></i>Ferie e Malattia <span style="font-size:12px;font-weight:400;color:#888;margin-left:6px">(settimanale · esclude l'operatore dai turni)</span></div>
+      ${absRows||`<div style="font-size:13px;color:#aaa;margin-bottom:8px">Nessun operatore assente questa settimana.</div>`}
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class=add-btn onclick="addAbsence('FERIE')">🌴 Aggiungi ferie</button>
+        <button class=add-btn onclick="addAbsence('MALATTIA')">🤒 Aggiungi malattia</button>
+      </div>
+    </div>`;
+
+    c.innerHTML=dayCards+absCard;
   } else {
     const cards=TKEYS.map(k=>{
       const ts=TS[k];const cnt=(state.editText[k]||"").split("\n").filter(s=>s.trim()).length;
