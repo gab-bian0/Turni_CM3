@@ -72,6 +72,13 @@ body{font-family:'Times New Roman',Times,serif;background:#d4dce8;min-height:100
 .exc-add-btn{margin-top:8px;width:100%;background:none;border:1.5px dashed #ccc;border-radius:7px;padding:6px 8px;font-size:12.5px;color:#777;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;transition:all .15s}
 .exc-add-btn:hover{border-color:#1e2d40;color:#1e2d40;background:#f0f4fa}
 .exc-form{margin-top:8px;background:#fffbe6;border:2px solid #c8a000;border-radius:8px;padding:10px}
+.abs-row{padding:10px 0;border-bottom:1px solid #eee}
+.abs-row:last-of-type{border-bottom:none}
+.abs-top{display:flex;gap:9px;align-items:center;margin-bottom:8px}
+.abs-days{display:flex;gap:5px;align-items:center;flex-wrap:wrap;padding-left:2px}
+.abs-days-label{font-size:12px;color:#777;font-weight:600;margin-right:3px}
+.day-toggle{min-width:42px;padding:5px 8px;font-size:12px;font-weight:700;border-radius:6px;cursor:pointer;border-width:1.5px;border-style:solid;font-family:inherit;transition:all .12s}
+.day-toggle:hover{filter:brightness(0.95)}
 @media(max-width:600px){.shifts{grid-template-columns:1fr}.config-grid{grid-template-columns:1fr}.hdr{flex-direction:column;align-items:flex-start}.hdr-right{width:100%;justify-content:space-between}}
 </style>
 </head>
@@ -168,6 +175,7 @@ function loadAll(){
   }catch{}
   ensureExc();
   migrateData();
+  ensureAbsenceDays();
   saveTeams();saveSchedule();
   initEditText();
 }
@@ -230,20 +238,36 @@ function removeException(di,idx){
 }
 
 // ── Ferie / Malattia ──────────────────────────────────────────
-// Set dei nomi assenti (maiuscolo) per filtrarli dai turni
-function absentSet(){
+// Restituisce, per un dato indice giorno, una mappa {NOME->tipo} di chi è assente quel giorno
+function absentOnDay(dayIdx){
   const m={};
-  (state.absences||[]).forEach(a=>{const n=(a.name||"").trim().toUpperCase();if(n)m[n]=a.type;});
+  (state.absences||[]).forEach(a=>{
+    const n=(a.name||"").trim().toUpperCase();
+    if(n && Array.isArray(a.days) && a.days.includes(dayIdx)) m[n]=a.type;
+  });
   return m;
 }
 function addAbsence(type){
   if(!state.absences)state.absences=[];
-  state.absences.push({name:"",type:type||"FERIE"});
+  // default: tutti i giorni selezionati
+  state.absences.push({name:"",type:type||"FERIE",days:[0,1,2,3,4,5,6]});
   saveSchedule();render();
 }
 function removeAbsence(idx){
   state.absences.splice(idx,1);
   saveSchedule();render();
+}
+function toggleAbsenceDay(idx,dayIdx){
+  const a=state.absences[idx];
+  if(!a.days)a.days=[];
+  const p=a.days.indexOf(dayIdx);
+  if(p>=0)a.days.splice(p,1); else a.days.push(dayIdx);
+  a.days.sort((x,y)=>x-y);
+  saveSchedule();render();
+}
+// Migra eventuali vecchie voci senza il campo days (le considera valide tutta la settimana)
+function ensureAbsenceDays(){
+  (state.absences||[]).forEach(a=>{if(!Array.isArray(a.days))a.days=[0,1,2,3,4,5,6];});
 }
 
 
@@ -272,7 +296,7 @@ function generateWord(){
         const ts=TS[t];
         // escludi operai con eccezione o in ferie/malattia questo giorno
         const excNames=(d.exc||[]).map(e=>e.name);
-        const absent=absentSet();
+        const absent=absentOnDay(i);
         const members=(state.teams[t]||[]).filter(wk=>!excNames.includes(wk)&&!absent[wk.toUpperCase()]);
         inner+=`<div style="background:${ts.bg};color:${ts.text};padding:4px 6px;border-radius:4px;margin-bottom:3px"><b>${t}</b><br><span style="font-size:8pt;line-height:1.6">${members.join("<br>")}</span></div>`;
       }
@@ -306,19 +330,18 @@ function generateWord(){
   ${ABBR.map((a,i)=>`<td style="background:#1e6f9f;color:white;font-weight:bold;text-align:center;font-size:8pt;border:2px solid #0a4c72">${a}<br><span style="font-weight:normal;font-size:7.5pt;font-family:monospace">${df(i)}</span></td>`).join("")}
 </tr>`;
 
-  const absentMap=absentSet();
   TKEYS.forEach(tk=>{
     const ts=TS[tk];
     (state.teams[tk]||[]).forEach(wk=>{
-      const absType=absentMap[wk.toUpperCase()];
       pg2+=`<tr>
         <td style="background:${ts.bg};color:${ts.text};font-weight:bold;font-size:8.5pt;border:2px solid #555;padding:4px 6px">${wk}</td>
         <td style="background:${ts.bg};color:${ts.text};font-weight:bold;text-align:center;font-size:8pt;border:2px solid #555">${tk}</td>`;
       DAYS.forEach((_,i)=>{
         const d=state.schedule[i];
         let tu="",bg="",fg="",fw="normal",extra="";
+        const absType=absentOnDay(i)[wk.toUpperCase()];
         if(absType){
-          // Ferie/Malattia: priorità massima, tutta la settimana
+          // Ferie/Malattia: priorità massima, solo nei giorni selezionati
           tu=absType;
           if(absType==="FERIE"){bg="#e3f2e8";fg="#1b5e20";}
           else{bg="#fde8e8";fg="#9c1414";}
@@ -421,13 +444,24 @@ function render(){
       const isFerie=a.type==="FERIE";
       const badgeBg=isFerie?"#e3f2e8":"#fde8e8";
       const badgeFg=isFerie?"#1b5e20":"#9c1414";
-      return`<div class=special-row>
-        <input value="${(a.name||"").replace(/"/g,'&quot;')}" placeholder="NOME OPERAIO" style="width:160px;font-family:monospace;font-weight:600;text-transform:uppercase" oninput="state.absences[${i}].name=this.value.toUpperCase();this.value=state.absences[${i}].name;saveSchedule()">
-        <select style="font-size:13px;border:1.5px solid #bbb;border-radius:6px;padding:7px 11px;font-family:inherit;font-weight:700;background:${badgeBg};color:${badgeFg}" onchange="state.absences[${i}].type=this.value;saveSchedule();render()">
-          <option value="FERIE" ${isFerie?"selected":""}>🌴 FERIE</option>
-          <option value="MALATTIA" ${!isFerie?"selected":""}>🤒 MALATTIA</option>
-        </select>
-        <button class=del-btn onclick="removeAbsence(${i})" title="Elimina"><i class='ti ti-trash'></i></button>
+      const days=a.days||[];
+      const dayToggles=ABBR.map((ab,di)=>{
+        const on=days.includes(di);
+        return`<button class=day-toggle onclick="toggleAbsenceDay(${i},${di})" style="background:${on?(isFerie?'#2e7d32':'#c62828'):'transparent'};color:${on?'white':'#999'};border-color:${on?(isFerie?'#2e7d32':'#c62828'):'#ccc'}">${ab}</button>`;
+      }).join("");
+      return`<div class=abs-row>
+        <div class=abs-top>
+          <input value="${(a.name||"").replace(/"/g,'&quot;')}" placeholder="NOME OPERAIO" style="width:160px;font-family:monospace;font-weight:600;text-transform:uppercase;font-size:13px;border:1.5px solid #bbb;border-radius:6px;padding:7px 11px;background:#fafafa;color:#111" oninput="state.absences[${i}].name=this.value.toUpperCase();this.value=state.absences[${i}].name;saveSchedule()">
+          <select style="font-size:13px;border:1.5px solid #bbb;border-radius:6px;padding:7px 11px;font-family:inherit;font-weight:700;background:${badgeBg};color:${badgeFg}" onchange="state.absences[${i}].type=this.value;saveSchedule();render()">
+            <option value="FERIE" ${isFerie?"selected":""}>🌴 FERIE</option>
+            <option value="MALATTIA" ${!isFerie?"selected":""}>🤒 MALATTIA</option>
+          </select>
+          <button class=del-btn onclick="removeAbsence(${i})" title="Elimina"><i class='ti ti-trash'></i></button>
+        </div>
+        <div class=abs-days>
+          <span class=abs-days-label>Giorni:</span>
+          ${dayToggles}
+        </div>
       </div>`;
     }).join("");
     const absCard=`<div class=special-card style="border-top:4px solid #c89000">
