@@ -296,17 +296,102 @@ function triggerImport(){
   if(inp){inp.value="";inp.click();}
 }
 
+// Lettore di riserva: ricostruisce le impostazioni leggendo le tabelle del Word
+// (per i file generati prima dell'introduzione del blocco dati nascosto)
+function parseLegacyWord(text){
+  let doc;
+  try{ doc=new DOMParser().parseFromString(text,"text/html"); }catch(e){ return null; }
+  const out={};
+  const bodyText=(doc.body&&(doc.body.textContent||""))||"";
+  const wm=bodyText.match(/SETTIMANA\s+(\d+)/i);
+  if(wm) out.weekNum=parseInt(wm[1],10);
+  // prima data DD/MM dell'intervallo
+  const dm=bodyText.match(/(\d{2})\/(\d{2})\s*[–—-]\s*\d{2}\/\d{2}/);
+  if(dm){
+    const dd=parseInt(dm[1],10), mm=parseInt(dm[2],10);
+    const now=new Date(); let yr=now.getFullYear();
+    let cand=new Date(yr,mm-1,dd);
+    if(cand.getTime()-now.getTime()>30*86400000) yr-=1;  // troppo nel futuro -> anno scorso
+    out.startDate=`${yr}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+  }
+  // mappa inversa orario -> chiave turno (normalizza trattini e spazi)
+  const norm=s=>String(s).replace(/[–—-]/g,'-').replace(/\s+/g,'').toUpperCase();
+  const SLREV={}; Object.keys(SL).forEach(k=>{SLREV[norm(SL[k])]=k;});
+  // individua la tabella "Orari per Operatore"
+  const tables=[...doc.querySelectorAll("table")];
+  let p2=null;
+  tables.forEach(t=>{ if((t.textContent||"").includes("ORARI PER OPERATORE")) p2=t; });
+  const teams={};
+  const schedule=Array.from({length:7},()=>({s:{"06-14":"","14-22":"","22-06":""},notes:"",exc:[]}));
+  const absMap={};
+  if(p2){
+    [...p2.querySelectorAll("tr")].forEach(r=>{
+      const cells=[...r.querySelectorAll("td")];
+      if(cells.length!==9) return;  // solo righe operaio (nome+squadra+7 giorni)
+      const name=(cells[0].textContent||"").trim().toUpperCase();
+      const team=(cells[1].textContent||"").trim().toUpperCase();
+      if(!name||!TKEYS.includes(team)) return;  // salta intestazioni
+      if(!teams[team]) teams[team]=[];
+      if(!teams[team].includes(name)) teams[team].push(name);
+      for(let i=0;i<7;i++){
+        const raw=(cells[2+i].textContent||"").trim();
+        const hasBolt=raw.includes("⚡");
+        const txt=raw.replace(/⚡/g,"").trim().toUpperCase();
+        if(txt===""||txt==="RIPOSO") continue;
+        if(txt==="FERIE"||txt==="MALATTIA"){
+          const key=name+"|"+txt;
+          (absMap[key]=absMap[key]||[]).push(i);
+          continue;
+        }
+        const sk=SLREV[norm(txt)];
+        if(sk){
+          if(hasBolt) schedule[i].exc.push({name,realTeam:team,shift:sk});
+          else schedule[i].s[sk]=team;  // la squadra lavora questo turno quel giorno
+        }
+      }
+    });
+  }
+  if(!Object.keys(teams).length) return null;  // non è un Word di questa app
+  // ruoli speciali (dalla riga "RUOLI SPECIALI:" in pagina 1)
+  tables.forEach(t=>{
+    [...t.querySelectorAll("td")].forEach(td=>{
+      const tx=(td.textContent||"");
+      if(/RUOLI SPECIALI:/i.test(tx)){
+        const after=tx.split(/RUOLI SPECIALI:/i)[1]||"";
+        const roles=[];
+        after.split("·").map(s=>s.trim()).filter(Boolean).forEach(p=>{
+          const mm=p.match(/^(.+?)\s*\((.+?)\)\s*$/);
+          if(mm) roles.push({name:mm[1].trim().toUpperCase(),role:mm[2].trim()});
+        });
+        if(roles.length) out.specialRoles=roles;
+      }
+    });
+  });
+  // assembla ferie/malattia
+  const absences=[];
+  Object.keys(absMap).forEach(key=>{
+    const idx=key.lastIndexOf("|");
+    absences.push({name:key.slice(0,idx),type:key.slice(idx+1),days:absMap[key].sort((a,b)=>a-b)});
+  });
+  out.teams=teams;
+  out.schedule=schedule;
+  out.absences=absences;
+  return out;
+}
+
 function importWord(ev){
   const file=ev.target.files&&ev.target.files[0];
   if(!file)return;
   const reader=new FileReader();
   reader.onload=e=>{
     const text=String(e.target.result||"");
+    let data=null, legacy=false;
     const m=text.match(/<!--TURNI_STATE:([\s\S]*?):END-->/);
-    if(!m){ showToast("⚠ File non riconosciuto — usa un Word generato da questa app"); return; }
-    let data;
-    try{ data=JSON.parse(decodeURIComponent(escape(atob(m[1])))); }
-    catch(err){ showToast("⚠ Impossibile leggere i dati dal file"); return; }
+    if(m){
+      try{ data=JSON.parse(decodeURIComponent(escape(atob(m[1])))); }catch(err){ data=null; }
+    }
+    if(!data){ data=parseLegacyWord(text); legacy=true; }  // riserva: legge le tabelle
+    if(!data){ showToast("⚠ File non riconosciuto — non sembra un Word di questa app"); return; }
     if(data.weekNum!=null)state.weekNum=data.weekNum;
     if(data.startDate)state.startDate=data.startDate;
     if(data.teams)state.teams=data.teams;
@@ -317,7 +402,7 @@ function importWord(ev){
     saveTeams();saveSchedule();
     state.tab="schedule";
     render();
-    showToast("✓ Impostazioni importate dal Word");
+    showToast(legacy?"✓ Importato dal Word (formato precedente)":"✓ Impostazioni importate dal Word");
   };
   reader.onerror=()=>showToast("⚠ Errore nella lettura del file");
   reader.readAsText(file);
