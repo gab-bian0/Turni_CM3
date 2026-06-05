@@ -21,6 +21,8 @@ body{font-family:'Times New Roman',Times,serif;background:#d4dce8;min-height:100
 .week-inputs input:focus{border-color:rgba(255,255,255,0.7)}
 .btn-xls{background:#0e90b8;color:white;border:none;border-radius:8px;padding:11px 20px;font-weight:700;font-size:15px;cursor:pointer;display:flex;align-items:center;gap:7px;white-space:nowrap;transition:background .15s;font-family:inherit;box-shadow:0 2px 6px rgba(0,0,0,.2)}
 .btn-xls:hover{background:#077496}
+.btn-import{background:rgba(255,255,255,0.14);color:white;border:1px solid rgba(255,255,255,0.4);border-radius:8px;padding:11px 18px;font-weight:700;font-size:15px;cursor:pointer;display:flex;align-items:center;gap:7px;white-space:nowrap;transition:background .15s;font-family:inherit}
+.btn-import:hover{background:rgba(255,255,255,0.26)}
 .tabs{display:flex;background:white;border-radius:10px;padding:5px;margin-bottom:20px;gap:4px;box-shadow:0 2px 6px rgba(0,0,0,.1)}
 .tab{flex:1;padding:10px 16px;font-size:15px;cursor:pointer;background:none;border:none;border-radius:7px;color:#333;font-family:inherit;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:500}
 .tab.active{background:#1e2d40;color:white;font-weight:700}
@@ -94,7 +96,9 @@ body{font-family:'Times New Roman',Times,serif;background:#d4dce8;min-height:100
         <div class="row"><label>Settimana</label><input type="number" id="weekNum" value="21" min="1" max="53" onchange="state.weekNum=+this.value;saveSchedule();render()"></div>
         <div class="row"><label>Inizio settimana</label><input type="date" id="startDate" value="2025-05-19" onchange="state.startDate=this.value;saveSchedule();render()"></div>
       </div>
+      <button class="btn-import" onclick="triggerImport()"><i class="ti ti-upload"></i>Importa Word</button>
       <button class="btn-xls" onclick="generateWord()"><i class="ti ti-download"></i>Genera Word</button>
+      <input type="file" id="import-file" accept=".doc,.docx,.htm,.html" style="display:none" onchange="importWord(event)">
     </div>
   </div>
 
@@ -270,6 +274,55 @@ function ensureAbsenceDays(){
   (state.absences||[]).forEach(a=>{if(!Array.isArray(a.days))a.days=[0,1,2,3,4,5,6];});
 }
 
+// ── Import/Export stato dentro il Word ────────────────────────
+// Crea un commento HTML nascosto con tutte le impostazioni (base64, gestisce accenti/emoji)
+function stateBlobComment(){
+  const payload={
+    v:1,
+    weekNum:state.weekNum,
+    startDate:state.startDate,
+    teams:state.teams,
+    specialRoles:state.specialRoles,
+    schedule:state.schedule,
+    absences:state.absences,
+  };
+  let b64="";
+  try{ b64=btoa(unescape(encodeURIComponent(JSON.stringify(payload)))); }catch(e){ b64=""; }
+  return `<!--TURNI_STATE:${b64}:END-->`;
+}
+
+function triggerImport(){
+  const inp=document.getElementById("import-file");
+  if(inp){inp.value="";inp.click();}
+}
+
+function importWord(ev){
+  const file=ev.target.files&&ev.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const text=String(e.target.result||"");
+    const m=text.match(/<!--TURNI_STATE:([\s\S]*?):END-->/);
+    if(!m){ showToast("⚠ File non riconosciuto — usa un Word generato da questa app"); return; }
+    let data;
+    try{ data=JSON.parse(decodeURIComponent(escape(atob(m[1])))); }
+    catch(err){ showToast("⚠ Impossibile leggere i dati dal file"); return; }
+    if(data.weekNum!=null)state.weekNum=data.weekNum;
+    if(data.startDate)state.startDate=data.startDate;
+    if(data.teams)state.teams=data.teams;
+    if(data.specialRoles)state.specialRoles=data.specialRoles;
+    if(Array.isArray(data.schedule))state.schedule=data.schedule;
+    if(Array.isArray(data.absences))state.absences=data.absences;
+    ensureExc();migrateData();ensureAbsenceDays();initEditText();
+    saveTeams();saveSchedule();
+    state.tab="schedule";
+    render();
+    showToast("✓ Impostazioni importate dal Word");
+  };
+  reader.onerror=()=>showToast("⚠ Errore nella lettura del file");
+  reader.readAsText(file);
+}
+
 
 
 function generateWord(){
@@ -384,6 +437,7 @@ function generateWord(){
   body { font-family:Calibri,sans-serif; }
 </style>
 </head><body>
+${stateBlobComment()}
 <div class=sec1>${pg1}</div>
 <br style="page-break-before:always">
 <div class=sec2>${pg2}</div>
